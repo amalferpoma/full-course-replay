@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Full Race Feed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E7E8E4; --surface:#F6F6F3; --ink:#16191D; --muted:#5E646C; --line:#C9CBC5;
+  --wec:#1F5FBF; --imsa:#C8102E; --gtwc:#C98A00; --nascar:#2E8540; --n24:#6B3FA0; --indy:#0F7C8C; --igtc:#A0522D;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow","Helvetica Neue",Arial,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1C1F23; --surface:#25292E; --ink:#ECEDEA; --muted:#A3A8AE; --line:#3A3F45;
+    --wec:#5B8FE0; --imsa:#F0525F; --gtwc:#F2B829; --nascar:#5BB86E; --n24:#A57BD6; --indy:#3FB7C7; --igtc:#D98A5F;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1C1F23; --surface:#25292E; --ink:#ECEDEA; --muted:#A3A8AE; --line:#3A3F45;
+  --wec:#5B8FE0; --imsa:#F0525F; --gtwc:#F2B829; --nascar:#5BB86E; --n24:#A57BD6; --indy:#3FB7C7; --igtc:#D98A5F;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;padding:28px 18px 64px}
+header h1{font-family:var(--display);font-weight:800;font-size:clamp(44px,11vw,76px);line-height:.9;letter-spacing:-.01em;margin:0;font-style:italic}
+header p{margin:10px 0 0;color:var(--muted);max-width:60ch}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 6px}
+.chip{font-family:var(--display);font-weight:700;font-size:17px;padding:6px 14px 6px 12px;border-radius:999px;border:1.5px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.chip .dot{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.chip[aria-pressed="false"]{opacity:.45}
+.chip:focus-visible,.watch:focus-visible,.seen:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.month{font-family:var(--display);font-weight:700;font-size:22px;color:var(--muted);margin:30px 0 8px}
+.race{display:grid;grid-template-columns:62px 1fr;gap:14px;align-items:start;padding:14px 0;border-top:1px solid var(--line)}
+.plate{background:var(--c);color:#fff;border-radius:8px;text-align:center;padding:6px 0 7px;font-family:var(--display);line-height:1}
+.plate b{display:block;font-size:30px;font-weight:800}
+.plate span{font-size:14px;font-weight:600}
+.race.missing .plate{background:transparent;color:var(--c);border:2px dashed var(--c)}
+.series{font-family:var(--display);font-weight:700;font-size:15px;color:var(--c)}
+.event{font-weight:600;font-size:17px;margin:1px 0 6px}
+.links{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.watch{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-size:14px;font-weight:500}
+.watch svg{width:14px;height:14px;fill:var(--c)}
+.watch small{color:var(--muted);font-size:13px}
+.note{font-size:14px;color:var(--muted);margin-top:6px}
+.flag{font-size:12px;font-weight:600;border:1px solid var(--muted);color:var(--muted);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+.seen{margin-left:auto;background:none;border:1px solid var(--line);border-radius:6px;color:var(--muted);font:500 13px var(--body);padding:5px 9px;cursor:pointer}
+.seen[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.race.watched .event{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+footer{margin-top:40px;color:var(--muted);font-size:14px}
+@media (max-width:420px){.race{grid-template-columns:52px 1fr;gap:11px}.plate b{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Full races,<br>start to flag</h1>
+  <p>Complete replays from WEC, IMSA, GT World Challenge Europe, the Intercontinental GT Challenge, the Nürburgring 24h, NASCAR Cup and IndyCar. Newest race first.</p>
+</header>
+<div class="filters" id="filters"></div>
+<main id="feed"></main>
+<footer id="foot"></footer>
+</div>
+<script>
+const UPDATED = "12 October 2026";
+const SERIES = {
+  wec:{name:"FIA WEC",c:"var(--wec)"},
+  imsa:{name:"IMSA WeatherTech",c:"var(--imsa)"},
+  gtwc:{name:"GT World Challenge Europe",c:"var(--gtwc)"},
+  n24:{name:"Nürburgring 24h",c:"var(--n24)"},
+  nascar:{name:"NASCAR Cup",c:"var(--nascar)"},
+  indy:{name:"IndyCar",c:"var(--indy)"},
+  igtc:{name:"Intercontinental GT Challenge",c:"var(--igtc)"}
+};
+// date = race day (last day for multi-day races)
+const RACES = [
+ {s:"indy",d:"2026-06-07",e:"Bommarito 500, World Wide Technology Raceway",v:[["pRvK9lZeSGo","3:24:03"]],unofficial:true,note:"Spanish commentary (ESPN). No official full race this season."},
+ {s:"indy",d:"2026-06-21",e:"Road America Grand Prix",v:[["82C8KB5f5Jw","2:01:22"]],unofficial:true,note:"Spanish commentary (ESPN). No official full race this season."},
+ {s:"indy",d:"2026-07-05",e:"Honda Indy 200, Mid-Ohio",v:[["TYGGnTxxh1k","2:00:54"]],unofficial:true,note:"Spanish commentary (ESPN). No official full race this season."},
+ {s:"indy",d:"2026-07-19",e:"Nashville Superspeedway",v:[["aVTYYOpzKuU","2:02:39"]],unofficial:true,note:"Spanish commentary (ESPN). No official full race this season."},
+ {s:"indy",d:"2026-08-09",e:"Grand Prix of Portland",v:[["b62q8vumwuU","2:00:31"]],unofficial:true,note:"Spanish commentary (ESPN). No official full race this season."},
+ {s:"indy",d:"2026-08-16",e:"Streets of Markham",v:[["xUkns-gaVrA","2:29:03"]],unofficial:true,note:"Spanish commentary (ESPN). No official full race this season."},
+ {s:"indy",d:"2026-08-23",e:"Freedom 250, Washington D.C.",v:[["gXQTcsJsOY8","2:56:13"]],unofficial:true,note:"Spanish commentary (ESPN). No official full race this season."},
+ {s:"indy",d:"2026-08-29",e:"Milwaukee Mile, Race 1",v:[["Duldog_X0AQ","2:22:31"]],unofficial:true,note:"Spanish commentary (ESPN). No official full race this season."},
+ {s:"indy",d:"2026-08-30",e:"Milwaukee Mile, Race 2",v:[["hHsT2B1e3D0","2:06:32"]],unofficial:true,note:"Spanish commentary (ESPN). No official full race this season."},
+ {s:"indy",d:"2026-09-06",e:"Grand Prix of Monterey, Laguna Seca",v:[["DaVcUWlAbpk","2:12:39"]],unofficial:true,note:"Spanish commentary (ESPN). No official full race this season."},
+ {s:"nascar",d:"2026-10-11",e:"Bank of America 400, Charlotte",v:[]},
+ {s:"igtc",d:"2026-09-13",e:"Suzuka 1000km",v:[["SxIhYQaqQeg","7:54:00"]]},
+ {s:"imsa",d:"2026-10-03",e:"Motul Petit Le Mans, Road Atlanta",v:[["Z7li5rLNvEc","10:17:52"]]},
+ {s:"gtwc",d:"2026-10-04",e:"Barcelona, Race 2",v:[["C70a-w2LPhM","2:05:50"]]},
+ {s:"nascar",d:"2026-10-04",e:"South Point 400, Las Vegas",v:[["H3xmYxMf6GU","2:49:00"]]},
+ {s:"gtwc",d:"2026-10-03",e:"Barcelona, Race 1",v:[["7YKLfBCWgcU","2:07:36"]]},
+ {s:"wec",d:"2026-09-27",e:"6 Hours of Fuji",v:[],note:"The full race is scheduled to premiere on the WEC channel in about two weeks."},
+ {s:"nascar",d:"2026-09-27",e:"Hollywood Casino 400, Kansas",v:[["WU7yPaUe2LQ","2:58:30"]]},
+ {s:"imsa",d:"2026-09-20",e:"Battle on the Bricks, Indianapolis",v:[["w9rA7fJFFmg","2:58:15"]]},
+ {s:"gtwc",d:"2026-09-20",e:"Zandvoort, Race 2",v:[["kQ-qaSmoawM","1:50:43"]]},
+ {s:"gtwc",d:"2026-09-19",e:"Zandvoort, Race 1",v:[["on1SqJwt_eA","1:49:06"]]},
+ {s:"nascar",d:"2026-09-19",e:"Bass Pro Shops Night Race, Bristol",v:[["rnTV8Ju2DSU","3:20:05"]]},
+ {s:"nascar",d:"2026-09-13",e:"Enjoy Illinois 300, World Wide Technology Raceway",v:[["TkeSuY3t6iY","3:57:02"]]},
+ {s:"wec",d:"2026-09-06",e:"Lone Star Le Mans, COTA",v:[["NzwInFiJnM4","7:00:53"]]},
+ {s:"nascar",d:"2026-09-06",e:"Cook Out Southern 500, Darlington",v:[["1Dwui77-P8I","4:14:48"]]},
+ {s:"gtwc",d:"2026-08-30",e:"Nürburgring",v:[["tv8BABUQrps","4:10:23"]]},
+ {s:"nascar",d:"2026-08-29",e:"Coke Zero Sugar 400, Daytona",v:[["hDw6KI5RMtU","3:04:18"]]},
+ {s:"imsa",d:"2026-08-23",e:"Michelin GT Challenge, VIR",v:[["QbibB_RXnxM","2:55:31"]]},
+ {s:"nascar",d:"2026-08-23",e:"Dollar Tree 301, New Hampshire",v:[["o3Xeb5AHn1M","3:29:21"]]},
+ {s:"nascar",d:"2026-08-15",e:"Cook Out 400, Richmond",v:[["inBeru9P_kQ","3:05:35"]]},
+ {s:"nascar",d:"2026-08-09",e:"Iowa Corn 350, Iowa",v:[["iyRNXEYQXs0","3:01:55"]]},
+ {s:"imsa",d:"2026-08-02",e:"SportsCar Endurance Grand Prix, Road America",v:[["N1-C_G5hDk0","6:21:54"]]},
+ {s:"gtwc",d:"2026-08-02",e:"Magny-Cours, Race 2",v:[["NbY8E8uLIxs","2:18:31"]]},
+ {s:"gtwc",d:"2026-08-01",e:"Magny-Cours, Race 1",v:[["bCYIMdGZBYA","2:03:05"]]},
+ {s:"nascar",d:"2026-07-26",e:"Brickyard 400, Indianapolis",v:[["bYLzOrulYXQ","3:14:31"]]},
+ {s:"nascar",d:"2026-07-19",e:"Window World 450, North Wilkesboro",v:[["m0_EkPFbxEA","2:57:02"]]},
+ {s:"gtwc",d:"2026-07-19",e:"Misano, Race 2",v:[["iZh0_ZOdQC8","1:50:36"]]},
+ {s:"gtwc",d:"2026-07-18",e:"Misano, Race 1",v:[["VNAfdw9Lm-o","2:02:15"]]},
+ {s:"wec",d:"2026-07-12",e:"Rolex 6 Hours of São Paulo",v:[["TmHyWOes_w0","7:01:58"]]},
+ {s:"imsa",d:"2026-07-12",e:"Chevrolet Grand Prix, Canadian Tire Motorsport Park",v:[["K8oEQfFD8ls","2:56:55"]]},
+ {s:"nascar",d:"2026-07-12",e:"Quaker State 400, Atlanta",v:[["ZnKhHP-02_o","2:55:24"]]},
+ {s:"nascar",d:"2026-07-05",e:"eero 400, Chicagoland",v:[["0UPlwfFpLqE","3:15:20"]]},
+ {s:"imsa",d:"2026-06-28",e:"Sahlen's Six Hours of the Glen",v:[["qBJ3ExKcu9g","6:19:01"]]},
+ {s:"gtwc",d:"2026-06-28",e:"CrowdStrike 24 Hours of Spa",v:[["YzU6_l-2ov8","9:01:50","Part 1"],["PGSIoUyQVX0","9:15:20","Part 2"],["aaZPHEWe_Gk","8:42:15","Final 7 hours"]],note:"Also a round of the Intercontinental GT Challenge."},
+ {s:"nascar",d:"2026-06-28",e:"Toyota / Save Mart 350, Sonoma",v:[["i1JyVBAhHfc","2:45:28"]]},
+ {s:"nascar",d:"2026-06-21",e:"Anduril 250, Naval Base Coronado",v:[["ee1ANki3R0Y","3:54:38"]]},
+ {s:"wec",d:"2026-06-14",e:"24 Hours of Le Mans",v:[["717RAK0T9OM","26:22:02"]]},
+ {s:"nascar",d:"2026-06-14",e:"Great American Getaway 400, Pocono",v:[["IO1zJngNEy8","3:02:54"]]},
+ {s:"nascar",d:"2026-06-07",e:"FireKeepers Casino 400, Michigan",v:[["Qfhc-UNoZa4","3:41:56"]]}
+];
+const KEY="racefeed-v1";
+let state={off:[],seen:[]};
+try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&Array.isArray(s.off))state=Object.assign(state,s)}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const SHORT=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const play='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>';
+function esc(t){return t.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function renderFilters(){
+  const f=document.getElementById("filters");
+  f.innerHTML=Object.entries(SERIES).map(([k,s])=>`<button class="chip" style="--c:${s.c}" data-k="${k}" aria-pressed="${!state.off.includes(k)}"><span class="dot"></span>${s.name}</button>`).join("");
+  f.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{const k=b.dataset.k;state.off=state.off.includes(k)?state.off.filter(x=>x!==k):[...state.off,k];save();renderFilters();render()});
+}
+function render(){
+  const list=RACES.filter(r=>!state.off.includes(r.s)).sort((a,b)=>b.d.localeCompare(a.d));
+  let html="",cur="";
+  for(const r of list){
+    const [y,m,d]=r.d.split("-").map(Number);
+    const mk=MONTHS[m-1]+" "+y;
+    if(mk!==cur){html+=`<h2 class="month">${mk}</h2>`;cur=mk}
+    const id=r.s+r.d+r.e, seen=state.seen.includes(id), s=SERIES[r.s];
+    const links=r.v.length?r.v.map(([vid,dur,label])=>`<a class="watch" href="https://www.youtube.com/watch?v=${vid}" target="_blank" rel="noopener">${play}${label?esc(label):"Watch"} <small>${dur}</small></a>`).join("")
+      +`<button class="seen" data-id="${esc(id)}" aria-pressed="${seen}">${seen?"Watched":"Mark watched"}</button>`
+      :`<span class="note" style="margin:0">No full race on YouTube yet. Checked weekly.</span>`;
+    html+=`<article class="race${r.v.length?"":" missing"}${seen?" watched":""}" style="--c:${s.c}">
+      <div class="plate"><b>${d}</b><span>${SHORT[m-1]}</span></div>
+      <div><div class="series">${s.name}${r.unofficial?'<span class="flag">Unofficial</span>':""}</div>
+      <div class="event">${esc(r.e)}</div><div class="links">${links}</div>
+      ${r.note?`<div class="note">${esc(r.note)}</div>`:""}</div></article>`;
+  }
+  if(!list.length)html='<p class="note">All series are hidden. Tap a series above to show it.</p>';
+  const feed=document.getElementById("feed");feed.innerHTML=html;
+  feed.querySelectorAll(".seen").forEach(b=>b.onclick=()=>{const id=b.dataset.id;state.seen=state.seen.includes(id)?state.seen.filter(x=>x!==id):[...state.seen,id];save();render()});
+}
+document.getElementById("foot").textContent=`Last updated ${UPDATED}. Official channels unless marked unofficial. Durations are the full stream, including pre- and post-race coverage.`;
+renderFilters();render();
+</script>
+</body>
+</html>
