@@ -29,9 +29,6 @@ full-course-replay is a curated feed of **full-length motor racing replays** on 
 - **Fallback for NASCAR and IndyCar.** These series rarely publish full races officially, so reputable unofficial uploads are used when nothing official exists.
 - **Newest on top.** Entries are ordered by race date, most recent first.
 
-## Live feed
-
-👉 [Open the feed](https://claude.ai/artifact/W3QPj6KjGPUyfXmirtCXSf)
 
 ## Repository structure
 
