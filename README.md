@@ -4,6 +4,8 @@
 
 full-course-replay is a curated feed of **full-length motor racing replays** on YouTube: no highlights, no recaps, just the whole race from lights out to the chequered flag. A scheduled task checks for new uploads every week and adds them to the top of the page, so the latest races are always first.
 
+Live page available at [Full Course Replay](https://amalferpoma.github.io/full-course-replay/)
+
 ## Series covered
 
 | Series | Notes |
